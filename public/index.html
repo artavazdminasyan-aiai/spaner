@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Spaner</title>
+  <meta name="description" content="Spaner — start with one king, recruit an army, checkmate the other king.">
+  <meta name="theme-color" content="#14291f">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2314291f'/%3E%3Cpath d='M44 12h12v10h10v12H56v14H44V34H34V22h10z' fill='%23d4a94a'/%3E%3Cpath d='M26 86c0-18 8-30 24-34 16 4 24 16 24 34z' fill='%23efdfba'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================== MENU ============================== -->
+<main id="menu" class="screen" hidden>
+  <header class="brand">
+    <div class="brand-orn" aria-hidden="true"><span></span>◆<span></span></div>
+    <h1>Spaner</h1>
+    <p class="tagline">Recruit your army.</p>
+  </header>
+
+  <section class="modes">
+    <article class="card mode mode-ai">
+      <h2>Versus Computer</h2>
+      <p class="lead">Pick an opponent from gentle to merciless.</p>
+      <div class="levels" id="levels" role="radiogroup" aria-label="Computer level"></div>
+      <div class="field">
+        <span class="field-label">Play as</span>
+        <div class="seg" id="ai-color" role="radiogroup" aria-label="Your colour">
+          <button type="button" data-v="w" role="radio">White</button>
+          <button type="button" data-v="r" role="radio">Random</button>
+          <button type="button" data-v="b" role="radio">Black</button>
+        </div>
+      </div>
+      <button type="button" class="btn primary wide" id="start-ai">Start game</button>
+    </article>
+
+    <article class="card mode mode-online">
+      <h2>Play a Friend</h2>
+      <p class="lead">Open a private table and send your friend the link. Reloading the page puts you back in your seat.</p>
+      <label class="field">
+        <span class="field-label">Your name</span>
+        <input id="player-name" type="text" maxlength="16" autocomplete="nickname" placeholder="Player">
+      </label>
+      <div class="field">
+        <span class="field-label">Play as</span>
+        <div class="seg" id="online-color" role="radiogroup" aria-label="Your colour online">
+          <button type="button" data-v="w" role="radio">White</button>
+          <button type="button" data-v="r" role="radio">Random</button>
+          <button type="button" data-v="b" role="radio">Black</button>
+        </div>
+      </div>
+      <button type="button" class="btn primary wide" id="create-room">Create invite link</button>
+      <form class="join" id="join-form">
+        <input id="join-code" type="text" maxlength="40" placeholder="Room code or link" aria-label="Room code or link" autocapitalize="characters">
+        <button type="submit" class="btn">Join</button>
+      </form>
+    </article>
+
+    <article class="card mode mode-local">
+      <h2>Same Device</h2>
+      <p class="lead">Two players, one screen. Take turns at the board.</p>
+      <div class="mini-board" aria-hidden="true"></div>
+      <button type="button" class="btn wide" id="start-local">Start pass &amp; play</button>
+    </article>
+  </section>
+
+  <section class="card roster" aria-labelledby="roster-title">
+    <h2 id="roster-title">The Army</h2>
+    <div class="roster-grid" id="roster"></div>
+  </section>
+
+  <footer class="menu-foot">
+    <button type="button" class="link" data-open-rules>Read the full rules</button>
+  </footer>
+</main>
+
+<!-- ============================== GAME ============================== -->
+<main id="game" class="screen" hidden>
+  <div class="table">
+    <section class="board-col">
+      <div class="pbar" id="pbar-top"></div>
+      <div class="frame">
+        <div class="board" id="board">
+          <div class="squares"></div>
+          <div class="pieces"></div>
+          <div class="overlay" id="overlay" hidden></div>
+        </div>
+      </div>
+      <div class="pbar" id="pbar-bottom"></div>
+    </section>
+
+    <aside class="panel card">
+      <div class="clock" aria-label="Clocks">
+        <div class="lcd">
+          <div class="lcd-label">Game</div>
+          <div class="lcd-val" id="clock-game">15:00</div>
+        </div>
+        <div class="clock-gem" aria-hidden="true">◆</div>
+        <div class="lcd" id="lcd-turn">
+          <div class="lcd-label" id="turn-label">Turn</div>
+          <div class="lcd-val" id="clock-turn">0:30</div>
+        </div>
+        <div class="turnbar"><i id="turnbar"></i></div>
+      </div>
+
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="tray" id="tray" hidden></div>
+
+      <div class="spawn">
+        <div class="spawn-row">
+          <span>Next arrival</span>
+          <strong id="spawn-in">—</strong>
+        </div>
+        <div class="spawn-bar"><i id="spawnbar"></i></div>
+        <div class="spawn-rate" id="spawn-rate"></div>
+      </div>
+
+      <div class="invite" id="invite" hidden>
+        <div class="invite-title">Invite link</div>
+        <div class="invite-row">
+          <input id="invite-url" readonly aria-label="Invite link">
+          <button type="button" class="btn small" id="copy-link">Copy</button>
+        </div>
+        <div class="invite-code">Room code <strong id="invite-code"></strong></div>
+      </div>
+
+      <div class="log-wrap">
+        <div class="log-title">Chronicle</div>
+        <ol class="log" id="log"></ol>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn small" id="btn-resign">Resign</button>
+        <button type="button" class="btn small" id="btn-rematch" hidden>Rematch</button>
+        <button type="button" class="btn small" id="btn-flip" title="Flip board">Flip</button>
+        <button type="button" class="btn small" id="btn-sound" title="Sound"></button>
+        <button type="button" class="btn small" data-open-rules>Rules</button>
+        <button type="button" class="btn small" id="btn-menu">Menu</button>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<!-- ============================== RESULT ============================== -->
+<div class="modal" id="result" hidden>
+  <div class="modal-card card">
+    <div class="result-crest" id="result-crest" aria-hidden="true"></div>
+    <h2 id="result-title"></h2>
+    <p id="result-reason"></p>
+    <div class="result-score" id="result-score"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn primary" id="result-rematch">Rematch</button>
+      <button type="button" class="btn" id="result-view">View board</button>
+      <button type="button" class="btn" id="result-menu">Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== RULES ============================== -->
+<dialog id="rules" class="rules card">
+  <form method="dialog" class="rules-close"><button class="btn small" aria-label="Close rules">Close</button></form>
+  <h2>How to play Spaner</h2>
+  <p class="lead">Start with one king. Recruit an army. Checkmate the other king to win. If nobody wins in 15 minutes, the bigger army wins.</p>
+
+  <h3>Turns &amp; clocks</h3>
+  <ul>
+    <li>White starts with a king on e1, Black with a king on e8. Everything else is empty. White moves first.</li>
+    <li>One shared <b>15-minute game clock</b>. Each turn — move, commander order and placing recruits — must finish within <b>30 seconds</b> or you lose.</li>
+  </ul>
+
+  <h3>New pieces appear</h3>
+  <ul>
+    <li>The first neutral (teal) piece appears after 10 seconds on a random empty square, any type except a king.</li>
+    <li>Every 10 s at first → every 30 s once someone owns 5 pieces → every 60 s once both own 10. Slower rates never speed back up.</li>
+    <li>Neutral pieces never move and never attack, but they do block lines.</li>
+  </ul>
+
+  <h3>Recruiting</h3>
+  <ul>
+    <li>Capture a neutral or enemy piece and it joins you. Your piece takes its square; you place the recruit on any empty square in your half (the four rows nearest you).</li>
+    <li>If your half is full, place it anywhere empty. A recruit can give check the moment it lands — and it can block a check on your own king.</li>
+    <li>Kings can never be recruited.</li>
+  </ul>
+
+  <h3>The pieces</h3>
+  <div class="rules-roster" id="rules-roster"></div>
+  <p class="note">No castling, no two-square pawn move, no en passant. Only knights and dragons jump.</p>
+
+  <h3>Commander orders</h3>
+  <ul>
+    <li>After every five turns you complete while owning a commander, your rooks and bananas each advance one square: front pieces first, then a→h.</li>
+    <li>Empty square ahead → step forward. Neutral or enemy piece (not a king) → step forward and recruit it. Own piece, enemy king or edge → stay.</li>
+    <li>The badge on a commander shows how many of your turns remain until its next order.</li>
+  </ul>
+
+  <h3>Winning</h3>
+  <ul>
+    <li>Checkmate wins at once. No legal turn while safe = draw.</li>
+    <li>At 15:00 every owned piece scores 1 (kings and banana copies included). Higher score wins, even if in check.</li>
+  </ul>
+</dialog>
+
+<div class="promo" id="promo" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="engine.js"></script>
+<script src="ai.js"></script>
+<script src="pieces.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

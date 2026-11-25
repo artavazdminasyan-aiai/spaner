@@ -1,0 +1,15 @@
+{
+  "name": "spaner",
+  "version": "1.0.0",
+  "description": "Spaner — start with one king, recruit an army, checkmate the other king. Play the computer (Beginner to God) or a friend online.",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/engine.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
